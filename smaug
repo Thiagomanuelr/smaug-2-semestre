@@ -1,0 +1,191 @@
+import pygame
+pygame.init()
+
+
+matriz = [
+    "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWBBB",
+    "W.......................................................................................BBB",
+    "W.......................................................................................BBB",
+    "W.......................................................................................BBB",
+    "W.......................................................................................BBB",
+    "W.......................................................................................BBB",
+    "W.......................................................................................BBB",
+    "W.......................................................................................BBB",
+    "W.........GG...G........................................................................BBB",
+    "W.....GG..GG..GGG..............................G...............G........................BBB",
+    "GGGGGGDDGGGGGGGDGGDDGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG",
+    "DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD",
+]
+
+Height = 600
+Width = 800
+
+
+screen = pygame.display.set_mode((Width, Height), 0)
+BLOCKW = Width / 16
+BLOCKH = Height / 12
+
+BG = pygame.image.load("Fundo.png")
+Bg = pygame.transform.scale(BG, (Width, Height))
+
+
+
+
+class Bloco(pygame.sprite.Sprite):
+    def __init__(self, linha, coluna):
+        pygame.sprite.Sprite.__init__(self)
+        Grama = pygame.image.load("Grama.png")
+        self.image = pygame.transform.scale(Grama, (50, 50))
+        x = coluna * BLOCKW
+        y = linha * BLOCKH
+        self.rect = pygame.Rect((x, y), (BLOCKW, BLOCKH))
+
+class Dirt(pygame.sprite.Sprite):
+    def __init__(self, linha, coluna):
+        pygame.sprite.Sprite.__init__(self)
+        Terra = pygame.image.load("Terra.png")
+        self.image = pygame.transform.scale(Terra, (50, 50))
+        x = coluna * BLOCKW
+        y = linha * BLOCKH
+        self.rect = pygame.Rect((x, y), (BLOCKW, BLOCKH))
+
+class Wall(pygame.sprite.Sprite):
+    def __init__(self, linha, coluna):
+        pygame.sprite.Sprite.__init__(self)
+        muro = pygame.image.load("wall.png")
+        self.image = pygame.transform.scale(muro, (50, 50))
+        x = coluna * BLOCKW
+        y = linha * BLOCKH
+        self.rect = pygame.Rect((x, y), (BLOCKW, BLOCKH))
+
+
+class Prot(pygame.sprite.Sprite):
+    def __init__(self):
+        pygame.sprite.Sprite.__init__(self)
+        Prot = pygame.image.load("P.png")
+        self.x = 100
+        self.y = 100
+        self.image = pygame.transform.scale(Prot, (50, 50))
+        self.rect = pygame.Rect((self.x, self.y), (50, 50))
+        self.vel_x = 0
+        self.vel_y = 0
+        self.grav = 0.09
+        self.intecao_pos = list(self.rect.center)
+        self.isJumping = False
+
+
+
+    def mover_esquerda(self):
+        self.vel_x = -1
+        if self.rect.x == 775:
+            self.vel_x = 0
+
+    def mover_direita(self):
+        self.vel_x = 1
+        if self.rect.x == 25:
+            self.vel_x = 0
+
+    def pular(self):
+        if self.isJumping == False:
+
+            self.vel_y = -4
+            self.intecao_pos[1] += self.vel_y
+            self.isJumping = True
+
+
+    def update(self, *args):
+        self.vel_y += self.grav
+        self.intecao_pos[0] += self.vel_x
+        self.intecao_pos[1] += self.vel_y
+
+    def parar_horizontal(self):
+        self.vel_x = 0
+
+    def autoriza_mov(self):
+        self.rect.center = self.intecao_pos
+
+    def rejeita_mov(self):
+        self.intecao_pos = list(self.rect.center)
+
+    def teste_colisao(self, grupo):
+        temp = self.rect.center
+        self.rect.center = self.intecao_pos
+        if not pygame.sprite.spritecollide(self, grupo, False):
+            self.autoriza_mov()
+        else:
+            self.rect.center = temp
+            self.vel_y = 0
+            self.rejeita_mov()
+            self.isJumping = False
+
+
+prot = Prot()
+herois = pygame.sprite.Group(prot)
+
+blocos = pygame.sprite.Group()
+
+for linha, lin in enumerate(matriz):
+    for coluna in range(0, 91):
+        elemento = matriz[linha][coluna]
+        if elemento == "G":
+            bloco = Bloco(linha, coluna)
+            blocos.add(bloco)
+        if elemento == "D":
+            bloco = Dirt(linha, coluna)
+            blocos.add(bloco)
+        if elemento == "W":
+            bloco = Wall(linha, coluna)
+            blocos.add(bloco)
+
+
+
+while True:
+
+    screen.blit(BG, (0,0))
+
+    blocos.draw(screen)
+
+    herois.draw(screen)
+
+
+    pygame.display.update()
+
+    #regras
+    prot.update()
+    prot.teste_colisao(blocos)
+
+
+
+
+
+
+
+    #eventos
+
+
+    for e in pygame.event.get():
+        if e.type == pygame.QUIT:
+            exit()
+
+        if e.type == pygame.KEYDOWN:
+            prot_x = 100
+            prot_y = 100
+            if e.key == pygame.K_RIGHT:
+                prot.mover_direita()
+                prot_x += 1
+                if prot.rect.x >= 775:
+                    prot.rejeita_mov()
+
+
+            if e.key == pygame.K_LEFT:
+                prot.mover_esquerda()
+                prot_x -= 1
+
+
+
+            if e.key == pygame.K_UP:
+                prot.pular()
+
+        if e.type == pygame.KEYUP:
+          if e.key == pygame.K_RIGHT or e.key == pygame.K_LEFT:
+              prot.parar_horizontal()
